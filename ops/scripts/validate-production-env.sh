@@ -14,7 +14,7 @@ fi
 set -a
 . "$environment_file"
 set +a
-required=(NODE_ENV HOST PORT STATUS_COMPONENTS STATUS_DATA_FILE STATUS_EVENTS_FILE)
+required=(NODE_ENV HOST PORT STATUS_PUBLIC_ORIGIN STATUS_COMPONENTS STATUS_DATA_FILE STATUS_EVENTS_FILE)
 for name in "${required[@]}"; do
   if [[ -z ${!name:-} ]]; then
     echo "Missing Status setting: $name" >&2
@@ -23,6 +23,10 @@ for name in "${required[@]}"; do
 done
 if [[ $NODE_ENV != production || $HOST != 127.0.0.1 || $PORT != 8082 ]]; then
   echo "Status must run in production mode on 127.0.0.1:8082" >&2
+  exit 1
+fi
+if [[ $STATUS_PUBLIC_ORIGIN != https://status.legacyhosting.xyz ]]; then
+  echo "STATUS_PUBLIC_ORIGIN must be https://status.legacyhosting.xyz" >&2
   exit 1
 fi
 if [[ $STATUS_DATA_FILE != /var/lib/legacy-hosting-status/* ]]; then

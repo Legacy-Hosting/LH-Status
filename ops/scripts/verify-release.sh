@@ -12,6 +12,8 @@ curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/status | \
   grep -q '"components"'
 curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/status | \
   grep -q '"events"'
+curl --fail --silent --show-error http://127.0.0.1:8082/feed.atom | \
+  grep -q '<feed xmlns="http://www.w3.org/2005/Atom">'
 pm2 describe lh-status >/dev/null
 current_release=$(readlink -f "$base/current")
 if [[ $current_release != "$base/releases/"* ]]; then

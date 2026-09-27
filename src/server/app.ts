@@ -2,6 +2,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { env } from "./config.js";
+import { buildAtomFeed } from "./feed.js";
 import type { StatusMonitor } from "./status.js";
 
 export async function buildApp(monitor: StatusMonitor) {
@@ -16,11 +17,16 @@ export async function buildApp(monitor: StatusMonitor) {
   app.get("/health", async () => ({
     status: "ok",
     service: "LH-Status",
-    version: "0.2.0",
+    version: "0.3.0",
   }));
   app.get("/api/v1/status", async (_request, reply) => {
     reply.header("Cache-Control", "public, max-age=10, stale-if-error=300");
     return monitor.snapshot();
+  });
+  app.get("/feed.atom", async (_request, reply) => {
+    reply.header("Cache-Control", "public, max-age=60, stale-if-error=600");
+    reply.type("application/atom+xml; charset=utf-8");
+    return buildAtomFeed(monitor.snapshot(), env.STATUS_PUBLIC_ORIGIN);
   });
   return app;
 }

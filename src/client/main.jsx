@@ -41,7 +41,7 @@ function EventCard({ event }) {
     ? `${eventTime(event.scheduledFor)}–${eventTime(event.scheduledUntil)}`
     : `Updated ${eventTime(event.updatedAt)}`;
   return (
-    <article className={`event-card ${event.impact}`}>
+    <article className={`event-card ${event.impact}`} id={`event-${event.id}`}>
       <div className="event-copy">
         <div className="event-meta">
           <span>{event.status.replaceAll("_", " ")}</span>
@@ -113,7 +113,7 @@ function App() {
 
   return (
     <div className="page">
-      <header><a href="/" className="brand"><span>L</span><div><strong>Legacy Hosting</strong><small>Service status</small></div></a><button onClick={() => void refresh()} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""} />Refresh</button></header>
+      <header><a href="/" className="brand"><span>L</span><div><strong>Legacy Hosting</strong><small>Service status</small></div></a><div className="header-actions"><a href="/feed.atom">Atom feed</a><button onClick={() => void refresh()} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""} />Refresh</button></div></header>
       <main>
         <section className={`overall ${overall}`}>
           <div className="overall-icon"><OverallIcon size={27} /></div>
@@ -150,7 +150,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span>LH-Status v0.2.0 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
+      <footer><span>LH-Status v0.3.0 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
     </div>
   );
 }

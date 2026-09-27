@@ -20,6 +20,7 @@ const schema = z
     HOST: z.string().default("127.0.0.1"),
     PORT: z.coerce.number().int().min(1).max(65_535).default(8082),
     TRUST_PROXY: booleanFromString,
+    STATUS_PUBLIC_ORIGIN: z.string().url().default("https://status.legacyhosting.xyz"),
     STATUS_COMPONENTS: z.string().default(defaultComponents),
     STATUS_DATA_FILE: z.string().min(1).default("./var/status-snapshot.json"),
     STATUS_EVENTS_FILE: z.string().min(1).default("./var/status-events.json"),
@@ -49,6 +50,24 @@ const schema = z
         path: ["HOST"],
         message: "LH-Status must listen on the local reverse-proxy interface",
       });
+    }
+    if (value.NODE_ENV === "production") {
+      const origin = new URL(value.STATUS_PUBLIC_ORIGIN);
+      if (
+        origin.protocol !== "https:" ||
+        origin.origin !== "https://status.legacyhosting.xyz" ||
+        origin.pathname !== "/" ||
+        origin.search ||
+        origin.hash ||
+        origin.username ||
+        origin.password
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["STATUS_PUBLIC_ORIGIN"],
+          message: "Production status origin must be https://status.legacyhosting.xyz",
+        });
+      }
     }
   });
 
