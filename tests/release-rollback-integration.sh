@@ -45,6 +45,7 @@ for version in 1.0.0 1.1.0; do
 done
 mkdir -p /var/www /var/lib/legacy-hosting-status
 printf '{}\n' > /var/lib/legacy-hosting-status/status-snapshot.json
+: > /var/lib/legacy-hosting-status/status-history.ndjson
 ln -s "$base/releases/1.1.0" "$base/current"
 ln -s "$base/releases/1.0.0" "$base/previous"
 ln -s "$base/current/dist/client" /var/www/legacy-hosting-status
