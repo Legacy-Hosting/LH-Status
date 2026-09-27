@@ -84,6 +84,7 @@ export class StatusMonitor {
   readonly #fetch: FetchImplementation;
   readonly #store: SnapshotStore | undefined;
   readonly #eventReader: EventReader | undefined;
+  readonly #onSnapshot: ((snapshot: StatusSnapshot) => Promise<void>) | undefined;
   #timer: NodeJS.Timeout | null = null;
   #refreshing: Promise<StatusSnapshot> | null = null;
   #snapshot: StatusSnapshot;
@@ -96,6 +97,7 @@ export class StatusMonitor {
     fetchImplementation?: FetchImplementation;
     store?: SnapshotStore;
     eventReader?: EventReader;
+    onSnapshot?: (snapshot: StatusSnapshot) => Promise<void>;
   }) {
     this.#targets = options.targets;
     this.#timeoutMs = options.timeoutMs;
@@ -104,6 +106,7 @@ export class StatusMonitor {
     this.#fetch = options.fetchImplementation ?? fetch;
     this.#store = options.store;
     this.#eventReader = options.eventReader;
+    this.#onSnapshot = options.onSnapshot;
     this.#snapshot = {
       version: 2,
       overall: "unknown",
@@ -189,6 +192,7 @@ export class StatusMonitor {
       events,
     };
     await this.#store?.save(this.#snapshot);
+    await this.#onSnapshot?.(this.#snapshot);
     return this.#snapshot;
   }
 

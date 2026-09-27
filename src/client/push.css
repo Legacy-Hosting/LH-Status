@@ -1,0 +1,16 @@
+.subscription-message {
+  margin: 12px 2px 0;
+  color: #a7abb6;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 620px) {
+  .push-button {
+    padding-inline: 9px;
+  }
+
+  .push-button span {
+    display: none;
+  }
+}

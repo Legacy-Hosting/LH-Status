@@ -26,7 +26,67 @@ test("process health stays independent from monitored components", async () => {
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().service, "LH-Status");
-  assert.equal(response.json().version, "0.3.0");
+  assert.equal(response.json().version, "0.4.0");
+});
+
+test("Web Push subscriptions require same-origin requests", async () => {
+  const subscriptions: string[] = [];
+  const pushApp = await buildApp(new StatusMonitor({
+    targets: [],
+    timeoutMs: 1_000,
+    degradedAfterMs: 1_500,
+    pollIntervalMs: 30_000,
+  }), {
+    publicKey: "B".repeat(87),
+    subscribe: async (subscription) => { subscriptions.push(subscription.endpoint); },
+    unsubscribe: async (subscription) => {
+      const index = subscriptions.indexOf(subscription.endpoint);
+      if (index < 0) return false;
+      subscriptions.splice(index, 1);
+      return true;
+    },
+  });
+  const payload = {
+    endpoint: "https://fcm.googleapis.com/fcm/send/test-subscription",
+    expirationTime: null,
+    keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) },
+  };
+  try {
+    const key = await pushApp.inject({
+      method: "GET",
+      url: "/api/v1/subscriptions/push/key",
+    });
+    assert.equal(key.statusCode, 200);
+    assert.equal(key.json().data.publicKey, "B".repeat(87));
+
+    const crossOrigin = await pushApp.inject({
+      method: "POST",
+      url: "/api/v1/subscriptions/push",
+      headers: { origin: "https://attacker.example" },
+      payload,
+    });
+    assert.equal(crossOrigin.statusCode, 403);
+
+    const subscribed = await pushApp.inject({
+      method: "POST",
+      url: "/api/v1/subscriptions/push",
+      headers: { origin: "https://status.legacyhosting.xyz" },
+      payload,
+    });
+    assert.equal(subscribed.statusCode, 201, subscribed.body);
+    assert.deepEqual(subscriptions, [payload.endpoint]);
+
+    const unsubscribed = await pushApp.inject({
+      method: "DELETE",
+      url: "/api/v1/subscriptions/push",
+      headers: { origin: "https://status.legacyhosting.xyz" },
+      payload,
+    });
+    assert.equal(unsubscribed.statusCode, 204);
+    assert.deepEqual(subscriptions, []);
+  } finally {
+    await pushApp.close();
+  }
 });
 
 test("the status snapshot is public and cacheable during an upstream failure", async () => {

@@ -1,0 +1,9 @@
+{
+  "name": "Legacy Hosting Status",
+  "short_name": "LH Status",
+  "description": "Independent service status and incident notifications for Legacy Hosting.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d11",
+  "theme_color": "#0b0d11"
+}
