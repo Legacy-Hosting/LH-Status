@@ -7,7 +7,7 @@ if [[ ! -f $environment_file ]]; then
   exit 1
 fi
 permissions=$(stat -c '%a' "$environment_file")
-if (( 10#$permissions > 600 )); then
+if (( (8#$permissions & 077) != 0 )); then
   echo "$environment_file must have mode 0600 or stricter" >&2
   exit 1
 fi
