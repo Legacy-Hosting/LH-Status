@@ -77,3 +77,26 @@ test("restoring history drops expired and malformed records", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("history accepts components added by live Hub configuration", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "lh-status-history-dynamic-"));
+  const path = join(directory, "history.ndjson");
+  const now = Date.parse("2026-09-27T18:00:00.000Z");
+  const history = new FileStatusHistory({
+    path,
+    components: [{ key: "api", name: "API" }],
+    now: () => now,
+  });
+  try {
+    await history.restore();
+    history.setComponents([{ key: "web-02", name: "Web 02" }]);
+    await history.record({
+      timestamp: new Date(now - 30_000).toISOString(),
+      components: [{ key: "web-02", name: "Web 02", state: "operational", latencyMs: 31 }],
+    });
+    assert.equal(history.query("api", "5m"), null);
+    assert.equal(history.query("web-02", "5m")?.summary.averageLatencyMs, 31);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

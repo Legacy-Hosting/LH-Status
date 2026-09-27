@@ -8,6 +8,7 @@ import {
   statusHistoryFile,
   statusPushStateFile,
 } from "./config.js";
+import { createRemoteComponentReader } from "./components.js";
 import {
   combineEventReaders,
   createFileEventReader,
@@ -33,14 +34,33 @@ if (pushNotificationConfig) {
   }
 }
 
+const remoteComponentReader = createRemoteComponentReader({
+  url: env.STATUS_COMPONENTS_URL,
+  timeoutMs: env.STATUS_REQUEST_TIMEOUT_MS,
+});
+let activeTargets = componentTargets;
+try {
+  activeTargets = await remoteComponentReader();
+} catch {
+  process.stderr.write("Hub status component configuration is unavailable; using the last packaged configuration\n");
+}
+
 const history = new FileStatusHistory({
   path: statusHistoryFile,
-  components: componentTargets,
+  components: activeTargets,
 });
 await history.restore();
 
+const readComponents = async () => {
+  const components = await remoteComponentReader();
+  activeTargets = components;
+  history.setComponents(components);
+  return components;
+};
+
 const monitor = new StatusMonitor({
-  targets: componentTargets,
+  targets: activeTargets,
+  targetReader: readComponents,
   timeoutMs: env.STATUS_REQUEST_TIMEOUT_MS,
   degradedAfterMs: env.STATUS_DEGRADED_AFTER_MS,
   pollIntervalMs: env.STATUS_POLL_INTERVAL_MS,
@@ -48,17 +68,18 @@ const monitor = new StatusMonitor({
   eventReader: combineEventReaders(
     createFileEventReader(
       statusEventsFile,
-      componentTargets.map((component) => component.key),
+      () => activeTargets.map((component) => component.key),
     ),
     createRemoteEventReader({
       url: env.STATUS_EVENTS_URL,
-      allowedComponentKeys: componentTargets.map((component) => component.key),
+      allowedComponentKeys: () => activeTargets.map((component) => component.key),
       timeoutMs: env.STATUS_REQUEST_TIMEOUT_MS,
     }),
   ),
   onSnapshot: async (snapshot) => {
     if (snapshot.generatedAt) {
       try {
+        history.setComponents(snapshot.components);
         await history.record({
           timestamp: snapshot.generatedAt,
           components: snapshot.components,

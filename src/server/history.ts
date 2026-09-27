@@ -41,6 +41,7 @@ export type ProbeHistoryInput = {
   timestamp: string;
   components: Array<{
     key: string;
+    name?: string;
     state: ComponentState;
     latencyMs: number | null;
   }>;
@@ -152,7 +153,15 @@ export class FileStatusHistory {
     await this.#compact();
   }
 
+  setComponents(components: Array<{ key: string; name: string }>) {
+    this.#components.clear();
+    for (const component of components) this.#components.set(component.key, component.name);
+  }
+
   async record(input: ProbeHistoryInput) {
+    for (const component of input.components) {
+      if (component.name) this.#components.set(component.key, component.name);
+    }
     const timestamp = Date.parse(input.timestamp);
     if (
       !Number.isFinite(timestamp) ||

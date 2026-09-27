@@ -231,6 +231,46 @@ function ComponentHistory({ component }) {
   );
 }
 
+function ComponentList({ components, expandedComponent, onToggle }) {
+  return (
+    <section className="components">
+      {components.map((component) => (
+        <article className={expandedComponent === component.key ? "expanded" : ""} key={component.key}>
+          <button
+            className="component-summary"
+            type="button"
+            aria-expanded={expandedComponent === component.key}
+            onClick={() => onToggle(component.key)}
+          >
+            <div><strong>{component.name}</strong><small>{component.latencyMs == null ? "No response" : `${component.latencyMs} ms`}</small></div>
+            <div className="component-state"><span className={`badge ${component.state}`}><i />{component.state.replace("_", " ")}</span><ChevronDown size={17} /></div>
+          </button>
+          {expandedComponent === component.key && <ComponentHistory component={component} />}
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function statusSections(components) {
+  const primary = components
+    .filter((component) => component.primary)
+    .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+  const secondary = components
+    .filter((component) => !component.primary)
+    .sort((left, right) => (left.datacenter ?? "").localeCompare(right.datacenter ?? "", undefined, { numeric: true })
+      || (left.service ?? left.name).localeCompare(right.service ?? right.name, undefined, { numeric: true })
+      || (left.number ?? "").localeCompare(right.number ?? "", undefined, { numeric: true }));
+  const sections = primary.length > 0 ? [{ key: "primary", label: "Main services", components: primary }] : [];
+  for (const component of secondary) {
+    const label = component.datacenter || "Other services";
+    const existing = sections.find((section) => section.key === `datacenter-${label}`);
+    if (existing) existing.components.push(component);
+    else sections.push({ key: `datacenter-${label}`, label, components: [component] });
+  }
+  return sections;
+}
+
 function applicationServerKey(value) {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
     Math.ceil(value.length / 4) * 4,
@@ -399,6 +439,10 @@ function App() {
   const eventHistory = events.filter(
     (event) => event.status === "resolved" || event.status === "completed",
   ).slice(0, 5);
+  const componentSections = useMemo(
+    () => statusSections(Array.isArray(snapshot?.components) ? snapshot.components : []),
+    [snapshot?.components],
+  );
 
   return (
     <div className="page">
@@ -410,23 +454,17 @@ function App() {
         </section>
         {pushMessage && <p className="subscription-message" role="status">{pushMessage}</p>}
         <div className="title"><div><span>Components</span><h2>Legacy Hosting services</h2></div><div><Clock3 size={14} />Updated {updated}</div></div>
-        <section className="components">
-          {(snapshot?.components ?? []).map((component) => (
-            <article className={expandedComponent === component.key ? "expanded" : ""} key={component.key}>
-              <button
-                className="component-summary"
-                type="button"
-                aria-expanded={expandedComponent === component.key}
-                onClick={() => setExpandedComponent((current) => current === component.key ? null : component.key)}
-              >
-                <div><strong>{component.name}</strong><small>{component.latencyMs == null ? "No response" : `${component.latencyMs} ms`}</small></div>
-                <div className="component-state"><span className={`badge ${component.state}`}><i />{component.state.replace("_", " ")}</span><ChevronDown size={17} /></div>
-              </button>
-              {expandedComponent === component.key && <ComponentHistory component={component} />}
-            </article>
-          ))}
-          {!snapshot?.components?.length && <div className="empty">Waiting for the first independent probe snapshot.</div>}
-        </section>
+        {componentSections.map((section) => (
+          <section className="component-group" key={section.key}>
+            <h3>{section.label}</h3>
+            <ComponentList
+              components={section.components}
+              expandedComponent={expandedComponent}
+              onToggle={(key) => setExpandedComponent((current) => current === key ? null : key)}
+            />
+          </section>
+        ))}
+        {componentSections.length === 0 && <div className="components empty">Waiting for the first independent probe snapshot.</div>}
         <div className="event-groups">
           <section className="event-section">
             <div className="event-heading"><Siren size={18} /><div><span>Incidents</span><h2>{incidents.length > 0 ? "Active incidents" : "No active incidents"}</h2></div></div>

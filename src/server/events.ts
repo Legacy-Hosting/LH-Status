@@ -86,6 +86,11 @@ export const statusEventsSchema = z.array(statusEventSchema).max(100).superRefin
 
 export type StatusEvent = z.infer<typeof statusEventSchema>;
 export type EventReader = () => Promise<StatusEvent[]>;
+type AllowedComponentKeys = readonly string[] | (() => readonly string[]);
+
+function currentAllowedKeys(value: AllowedComponentKeys) {
+  return typeof value === "function" ? value() : value;
+}
 
 function validatedEvents(parsed: unknown, allowedComponentKeys: readonly string[]) {
   const allowed = new Set(allowedComponentKeys);
@@ -102,7 +107,7 @@ function validatedEvents(parsed: unknown, allowedComponentKeys: readonly string[
 
 export function createFileEventReader(
   path: string,
-  allowedComponentKeys: readonly string[],
+  allowedComponentKeys: AllowedComponentKeys,
 ): EventReader {
   return async () => {
     let parsed: unknown;
@@ -113,13 +118,13 @@ export function createFileEventReader(
       if (code === "ENOENT") return [];
       throw error;
     }
-    return validatedEvents(parsed, allowedComponentKeys);
+    return validatedEvents(parsed, currentAllowedKeys(allowedComponentKeys));
   };
 }
 
 export function createRemoteEventReader(options: {
   url: string;
-  allowedComponentKeys: readonly string[];
+  allowedComponentKeys: AllowedComponentKeys;
   timeoutMs: number;
   fetchImplementation?: typeof fetch;
 }): EventReader {
@@ -132,7 +137,7 @@ export function createRemoteEventReader(options: {
       signal: AbortSignal.timeout(options.timeoutMs),
     });
     if (!response.ok) throw new Error(`Remote status events returned ${response.status}`);
-    return validatedEvents(await response.json(), options.allowedComponentKeys);
+    return validatedEvents(await response.json(), currentAllowedKeys(options.allowedComponentKeys));
   };
 }
 

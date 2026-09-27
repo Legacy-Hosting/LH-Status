@@ -51,6 +51,63 @@ test("the public snapshot aggregates partial outages without exposing URLs", asy
   assert.deepEqual(snapshot.events, [incident]);
 });
 
+test("origin FQDN targets use the direct probe and retain public grouping metadata", async () => {
+  let directTarget = "";
+  let fetchCalls = 0;
+  const monitor = new StatusMonitor({
+    targets: [{
+      key: "api",
+      name: "API",
+      url: "https://api.legacyhosting.xyz/health",
+      connectHostname: "ams3.api-01.legacyh.fyi",
+      primary: true,
+      datacenter: "Amsterdam 3",
+      service: "API",
+      number: "01",
+      order: 0,
+    }],
+    timeoutMs: 1_000,
+    degradedAfterMs: 1_500,
+    pollIntervalMs: 30_000,
+    fetchImplementation: async () => {
+      fetchCalls += 1;
+      return new Response("unexpected", { status: 500 });
+    },
+    directProbe: async (target) => {
+      directTarget = target.connectHostname ?? "";
+      return true;
+    },
+  });
+  const snapshot = await monitor.refresh();
+  assert.equal(fetchCalls, 0);
+  assert.equal(directTarget, "ams3.api-01.legacyh.fyi");
+  assert.equal(snapshot.components[0]?.state, "operational");
+  assert.equal(snapshot.components[0]?.datacenter, "Amsterdam 3");
+  assert.equal(JSON.stringify(snapshot).includes("legacyh.fyi"), false);
+});
+
+test("remote target refresh changes monitored services without a restart", async () => {
+  const monitor = new StatusMonitor({
+    targets: [{ key: "api", name: "API", url: "https://api.example.test/health" }],
+    targetReader: async () => [{
+      key: "web-02",
+      name: "Web 02",
+      url: "https://web02.example.test/health",
+      primary: false,
+      datacenter: "Amsterdam 3",
+      service: "Web",
+      number: "02",
+      order: 0,
+    }],
+    timeoutMs: 1_000,
+    degradedAfterMs: 1_500,
+    pollIntervalMs: 30_000,
+    fetchImplementation: async () => new Response("ok", { status: 200 }),
+  });
+  const snapshot = await monitor.refresh();
+  assert.deepEqual(snapshot.components.map(({ key, name }) => ({ key, name })), [{ key: "web-02", name: "Web 02" }]);
+});
+
 test("a restored or old snapshot is marked stale", async () => {
   const monitor = new StatusMonitor({
     targets,

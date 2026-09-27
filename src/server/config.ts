@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { validatedComponentTargets, type ComponentTarget } from "./components.js";
 
 const booleanFromString = z
   .enum(["true", "false"])
@@ -8,9 +9,9 @@ const booleanFromString = z
   .transform((value) => value === "true");
 
 const defaultComponents = JSON.stringify([
-  { key: "api", name: "API", url: "https://api.legacyhosting.xyz/health" },
-  { key: "sso", name: "SSO", url: "https://auth.legacyhosting.xyz/health" },
-  { key: "panel", name: "Web Panel", url: "https://panel.legacyhosting.xyz/" },
+  { key: "api", name: "API", url: "https://api.legacyhosting.xyz/health", connectHostname: "ams3.api-01.legacyh.fyi", primary: true, datacenter: "Amsterdam 3", service: "API", number: "01", order: 0 },
+  { key: "sso", name: "SSO", url: "https://auth.legacyhosting.xyz/health", connectHostname: "ams3.sso-01.legacyh.fyi", primary: true, datacenter: "Amsterdam 3", service: "SSO", number: "01", order: 1 },
+  { key: "panel", name: "Web Panel", url: "https://panel.legacyhosting.xyz/", connectHostname: "ams3.panel-01.legacyh.fyi", primary: true, datacenter: "Amsterdam 3", service: "Web Panel", number: "01", order: 2 },
 ]);
 const defaultPushHosts = JSON.stringify([
   "fcm.googleapis.com",
@@ -27,6 +28,7 @@ const schema = z
     TRUST_PROXY: booleanFromString,
     STATUS_PUBLIC_ORIGIN: z.string().url().default("https://status.legacyhosting.xyz"),
     STATUS_COMPONENTS: z.string().default(defaultComponents),
+    STATUS_COMPONENTS_URL: z.string().url().default("https://hub.legacyhosting.xyz/api/v1/public/status-components"),
     STATUS_DATA_FILE: z.string().min(1).default("./var/status-snapshot.json"),
     STATUS_HISTORY_FILE: z.string().min(1).default("./var/status-history.ndjson"),
     STATUS_EVENTS_FILE: z.string().min(1).default("./var/status-events.json"),
@@ -95,6 +97,14 @@ const schema = z
           message: "Production status events URL must be credential-free HTTPS",
         });
       }
+      const componentsUrl = new URL(value.STATUS_COMPONENTS_URL);
+      if (componentsUrl.protocol !== "https:" || componentsUrl.username || componentsUrl.password) {
+        context.addIssue({
+          code: "custom",
+          path: ["STATUS_COMPONENTS_URL"],
+          message: "Production status components URL must be credential-free HTTPS",
+        });
+      }
     }
     if (
       Boolean(value.STATUS_PUSH_VAPID_PUBLIC_KEY) !==
@@ -118,13 +128,6 @@ const schema = z
     }
   });
 
-const componentSchema = z.object({
-  key: z.string().regex(/^[a-z0-9-]{2,32}$/),
-  name: z.string().min(2).max(80),
-  url: z.string().url(),
-});
-
-export type ComponentTarget = z.infer<typeof componentSchema>;
 export const env = schema.parse(process.env);
 
 function parsePushHosts(raw: string) {
@@ -148,10 +151,7 @@ function parseComponents(raw: string): ComponentTarget[] {
   } catch {
     throw new Error("STATUS_COMPONENTS must be valid JSON");
   }
-  const components = z.array(componentSchema).min(1).max(30).parse(parsed);
-  if (new Set(components.map((component) => component.key)).size !== components.length) {
-    throw new Error("STATUS_COMPONENTS keys must be unique");
-  }
+  const components = validatedComponentTargets(parsed);
   if (
     env.NODE_ENV === "production" &&
     components.some((component) => !component.url.startsWith("https://"))
