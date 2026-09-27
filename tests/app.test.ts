@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/server/app.js";
+import { componentTargets } from "../src/server/config.js";
 import { StatusMonitor } from "../src/server/status.js";
 
 let app: FastifyInstance;
@@ -22,11 +23,22 @@ after(async () => {
   await app.close();
 });
 
+test("public components contain only API, SSO, and Web Panel in display order", () => {
+  assert.deepEqual(
+    componentTargets.map(({ key, name }) => ({ key, name })),
+    [
+      { key: "api", name: "API" },
+      { key: "sso", name: "SSO" },
+      { key: "panel", name: "Web Panel" },
+    ],
+  );
+});
+
 test("process health stays independent from monitored components", async () => {
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().service, "LH-Status");
-  assert.equal(response.json().version, "0.4.2");
+  assert.equal(response.json().version, "0.4.3");
 });
 
 test("Web Push subscriptions require same-origin requests", async () => {

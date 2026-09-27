@@ -8,10 +8,9 @@ const booleanFromString = z
   .transform((value) => value === "true");
 
 const defaultComponents = JSON.stringify([
-  { key: "panel", name: "Control panel", url: "https://panel.legacyhosting.xyz/" },
   { key: "api", name: "API", url: "https://api.legacyhosting.xyz/health" },
-  { key: "identity", name: "Identity", url: "https://auth.legacyhosting.xyz/health" },
-  { key: "hub", name: "Staff Hub", url: "https://hub.legacyhosting.xyz/health" },
+  { key: "sso", name: "SSO", url: "https://auth.legacyhosting.xyz/health" },
+  { key: "panel", name: "Web Panel", url: "https://panel.legacyhosting.xyz/" },
 ]);
 const defaultPushHosts = JSON.stringify([
   "fcm.googleapis.com",

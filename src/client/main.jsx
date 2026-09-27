@@ -198,7 +198,7 @@ function App() {
       <main>
         <section className={`overall ${overall}`}>
           <div className="overall-icon"><OverallIcon size={27} /></div>
-          <div><span>Current status</span><h1>{labels[overall] ?? labels.unknown}</h1><p>{offline ? "Live status could not be reached. Showing the last snapshot stored in this browser." : stale ? "The latest probe snapshot is older than expected." : "Public probes run independently from the services in Amsterdam."}</p></div>
+          <div><span>Current status</span><h1>{labels[overall] ?? labels.unknown}</h1><p>{offline ? "Live status could not be reached. Showing the last snapshot stored in this browser." : stale ? "The latest status snapshot is older than expected." : "Current availability across Legacy Hosting services."}</p></div>
         </section>
         {pushMessage && <p className="subscription-message" role="status">{pushMessage}</p>}
         <div className="title"><div><span>Components</span><h2>Legacy Hosting services</h2></div><div><Clock3 size={14} />Updated {updated}</div></div>
@@ -232,7 +232,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span>LH-Status v{packageMetadata.version} · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
+      <footer><span>LH-Status v{packageMetadata.version}</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
     </div>
   );
 }
