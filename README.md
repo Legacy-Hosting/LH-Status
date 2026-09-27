@@ -34,10 +34,10 @@ pnpm dev:ui
 
 ## Release and deployment
 
-Tags named `v*` publish immutable archives to `LH-Releases/LH-Status` and checksums to its `SHA256` directory. Deploy on `fra1-status-01` with:
+Tags named `v*` publish immutable archives to `LH-Releases/LH-Status`, checksums to `SHA256`, and detached Ed25519 signatures to `SIGNATURES`. A release fails closed when `RELEASE_SIGNING_PRIVATE_KEY_B64` is unavailable. Deploy on `fra1-status-01` with:
 
 ```bash
-ops/scripts/deploy-release.sh ARCHIVE CHECKSUM VERSION
+ops/scripts/deploy-release.sh ARCHIVE CHECKSUM SIGNATURE VERSION
 ```
 
 Production requires `/etc/legacy-hosting/status.env` with mode `0600`, a certificate for `status.legacyhosting.xyz`, `STATUS_PUBLIC_ORIGIN=https://status.legacyhosting.xyz`, `STATUS_DATA_FILE=/var/lib/legacy-hosting-status/status-snapshot.json`, `STATUS_EVENTS_FILE=/var/lib/legacy-hosting-status/status-events.json`, `STATUS_PUSH_STATE_FILE=/var/lib/legacy-hosting-status/push-state.json`, and the protected VAPID settings.
