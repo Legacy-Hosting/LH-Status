@@ -19,6 +19,11 @@ curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/subscriptions/pus
   grep -q '"publicKey"'
 pm2 describe lh-status >/dev/null
 current_release=$(readlink -f "$base/current")
+recorded_release=$(cat "$base/current-release")
+if [[ $recorded_release != "$(basename "$current_release")" ]]; then
+  echo "Status current-release marker does not match the current symlink" >&2
+  exit 1
+fi
 if [[ $current_release != "$base/releases/"* ]]; then
   echo "Status current symlink points outside the release directory" >&2
   exit 1
