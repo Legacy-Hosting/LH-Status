@@ -231,7 +231,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span>LH-Status v0.4.0 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
+      <footer><span>LH-Status v0.4.1 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
     </div>
   );
 }

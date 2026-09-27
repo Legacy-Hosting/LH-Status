@@ -33,7 +33,7 @@ export async function buildApp(
   app.get("/health", async () => ({
     status: "ok",
     service: "LH-Status",
-    version: "0.4.0",
+    version: "0.4.1",
   }));
   app.get("/api/v1/status", async (_request, reply) => {
     reply.header("Cache-Control", "public, max-age=10, stale-if-error=300");
