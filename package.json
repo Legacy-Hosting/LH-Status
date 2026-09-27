@@ -1,0 +1,36 @@
+{
+  "name": "@legacyhosting/status",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "pnpm": ">=12.4.1"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server/server.ts",
+    "dev:ui": "vite",
+    "build": "vite build && tsc -p tsconfig.json",
+    "start": "node dist/server/server.js",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/helmet": "13.1.1",
+    "@fastify/rate-limit": "11.2.0",
+    "dotenv": "18.0.4",
+    "fastify": "5.12.5",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "lucide-react": "1.48.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
+  }
+}
