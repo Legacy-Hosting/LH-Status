@@ -402,7 +402,7 @@ function App() {
 
   return (
     <div className="page">
-      <header><a href="/" className="brand"><span>L</span><div><strong>Legacy Hosting</strong><small>Service status</small></div></a><div className="header-actions"><a href="/feed.atom">Atom feed</a>{pushSupported && <button className="push-button" onClick={() => void togglePush()} disabled={["checking", "busy", "denied", "unavailable"].includes(pushState)}>{pushState === "subscribed" ? <BellOff size={16} /> : <Bell size={16} />}<span>{pushState === "subscribed" ? "Unsubscribe" : pushState === "busy" ? "Saving…" : "Subscribe"}</span></button>}<button onClick={() => void refresh()} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""} />Refresh</button></div></header>
+      <header><a href="/" className="brand"><img src="/favicon-192.png" alt="Legacy Hosting logo" /><div><strong>Legacy Hosting</strong><small>Service status</small></div></a><div className="header-actions"><a href="/feed.atom">Atom feed</a>{pushSupported && <button className="push-button" onClick={() => void togglePush()} disabled={["checking", "busy", "denied", "unavailable"].includes(pushState)}>{pushState === "subscribed" ? <BellOff size={16} /> : <Bell size={16} />}<span>{pushState === "subscribed" ? "Unsubscribe" : pushState === "busy" ? "Saving…" : "Subscribe"}</span></button>}<button onClick={() => void refresh()} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""} />Refresh</button></div></header>
       <main>
         <section className={`overall ${overall}`}>
           <div className="overall-icon"><OverallIcon size={27} /></div>
