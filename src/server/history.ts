@@ -96,11 +96,13 @@ function average(values: number[]) {
 }
 
 function worstState(states: Record<ComponentState, number>): ComponentState {
-  let selected: ComponentState = "unknown";
+  let selected: ComponentState | null = null;
   for (const state of componentStateSchema.options) {
-    if (states[state] > 0 && stateRank[state] > stateRank[selected]) selected = state;
+    if (states[state] > 0 && (selected === null || stateRank[state] > stateRank[selected])) {
+      selected = state;
+    }
   }
-  return selected;
+  return selected ?? "unknown";
 }
 
 export class FileStatusHistory {

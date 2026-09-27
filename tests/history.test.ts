@@ -41,6 +41,7 @@ test("probe history aggregates ranges and permanently excludes data older than 9
     assert.equal(result.summary.averageLatencyMs, 160);
     assert.equal(result.summary.availabilityPercent, 66.667);
     assert.equal(result.summary.outage, 1);
+    assert.equal(result.points.some((point) => point.state === "operational"), true);
     assert.equal(result.points.some((point) => point.state === "degraded"), true);
     assert.equal(result.points.some((point) => point.state === "outage"), true);
     assert.equal(history.query("private", "5m"), null);

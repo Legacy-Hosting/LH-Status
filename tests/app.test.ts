@@ -38,7 +38,7 @@ test("process health stays independent from monitored components", async () => {
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().service, "LH-Status");
-  assert.equal(response.json().version, "0.5.0");
+  assert.equal(response.json().version, "0.5.1");
 });
 
 test("Web Push subscriptions require same-origin requests", async () => {
