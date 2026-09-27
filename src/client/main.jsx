@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import packageMetadata from "../../package.json";
 import {
   AlertTriangle,
   Bell,
@@ -231,7 +232,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span>LH-Status v0.4.1 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
+      <footer><span>LH-Status v{packageMetadata.version} · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
     </div>
   );
 }

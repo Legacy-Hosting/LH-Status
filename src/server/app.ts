@@ -8,6 +8,7 @@ import {
   type PushSubscriptionApi,
 } from "./push.js";
 import type { StatusMonitor } from "./status.js";
+import { STATUS_VERSION } from "./version.js";
 
 function validBrowserOrigin(origin: string | undefined) {
   if (!origin) return false;
@@ -33,7 +34,7 @@ export async function buildApp(
   app.get("/health", async () => ({
     status: "ok",
     service: "LH-Status",
-    version: "0.4.1",
+    version: STATUS_VERSION,
   }));
   app.get("/api/v1/status", async (_request, reply) => {
     reply.header("Cache-Control", "public, max-age=10, stale-if-error=300");
