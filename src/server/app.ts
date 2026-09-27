@@ -16,7 +16,7 @@ export async function buildApp(monitor: StatusMonitor) {
   app.get("/health", async () => ({
     status: "ok",
     service: "LH-Status",
-    version: "0.1.0",
+    version: "0.2.0",
   }));
   app.get("/api/v1/status", async (_request, reply) => {
     reply.header("Cache-Control", "public, max-age=10, stale-if-error=300");

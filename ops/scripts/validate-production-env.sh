@@ -14,7 +14,7 @@ fi
 set -a
 . "$environment_file"
 set +a
-required=(NODE_ENV HOST PORT STATUS_COMPONENTS STATUS_DATA_FILE)
+required=(NODE_ENV HOST PORT STATUS_COMPONENTS STATUS_DATA_FILE STATUS_EVENTS_FILE)
 for name in "${required[@]}"; do
   if [[ -z ${!name:-} ]]; then
     echo "Missing Status setting: $name" >&2
@@ -27,6 +27,10 @@ if [[ $NODE_ENV != production || $HOST != 127.0.0.1 || $PORT != 8082 ]]; then
 fi
 if [[ $STATUS_DATA_FILE != /var/lib/legacy-hosting-status/* ]]; then
   echo "STATUS_DATA_FILE must stay below /var/lib/legacy-hosting-status" >&2
+  exit 1
+fi
+if [[ $STATUS_EVENTS_FILE != /var/lib/legacy-hosting-status/* ]]; then
+  echo "STATUS_EVENTS_FILE must stay below /var/lib/legacy-hosting-status" >&2
   exit 1
 fi
 node -e 'const targets=JSON.parse(process.env.STATUS_COMPONENTS); if(!Array.isArray(targets)||targets.length<1||targets.some((item)=>!String(item.url||"").startsWith("https://"))) process.exit(1)'

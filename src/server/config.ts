@@ -22,6 +22,7 @@ const schema = z
     TRUST_PROXY: booleanFromString,
     STATUS_COMPONENTS: z.string().default(defaultComponents),
     STATUS_DATA_FILE: z.string().min(1).default("./var/status-snapshot.json"),
+    STATUS_EVENTS_FILE: z.string().min(1).default("./var/status-events.json"),
     STATUS_POLL_INTERVAL_MS: z.coerce
       .number()
       .int()
@@ -82,3 +83,4 @@ function parseComponents(raw: string): ComponentTarget[] {
 
 export const componentTargets = parseComponents(env.STATUS_COMPONENTS);
 export const statusDataFile = resolve(process.cwd(), env.STATUS_DATA_FILE);
+export const statusEventsFile = resolve(process.cwd(), env.STATUS_EVENTS_FILE);

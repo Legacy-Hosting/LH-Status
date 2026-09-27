@@ -26,6 +26,7 @@ test("process health stays independent from monitored components", async () => {
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().service, "LH-Status");
+  assert.equal(response.json().version, "0.2.0");
 });
 
 test("the status snapshot is public and cacheable during an upstream failure", async () => {
@@ -33,4 +34,5 @@ test("the status snapshot is public and cacheable during an upstream failure", a
   assert.equal(response.statusCode, 200);
   assert.match(response.headers["cache-control"] ?? "", /stale-if-error=300/);
   assert.equal(response.json().overall, "operational");
+  assert.deepEqual(response.json().events, []);
 });

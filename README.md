@@ -6,6 +6,10 @@ The backend performs bounded HTTPS probes, writes the latest public snapshot ato
 
 No internal URL, token, infrastructure address, or error body is returned by the public API.
 
+Incidents and planned maintenance are loaded from the local `STATUS_EVENTS_FILE` and copied into the same atomic public snapshot as component health. This keeps published events available through the Nginx fallback when the Node.js process is unavailable. Event text is schema-validated and rejects URLs, the internal `legacyh.fyi` domain, and private IPv4 addresses. Event component keys must match `STATUS_COMPONENTS`.
+
+Use `/var/lib/legacy-hosting-status/status-events.json` in production. The file contains an array of `incident` or `maintenance` objects. Incidents use `investigating`, `identified`, `monitoring`, or `resolved`; maintenance uses `scheduled`, `in_progress`, or `completed`. Every object requires a stable lowercase `id`, public `title` and `message`, an impact (`none`, `minor`, `major`, or `critical`), component keys, and ISO timestamps. Resolved incidents also require `resolvedAt`; maintenance requires `scheduledFor` and `scheduledUntil`.
+
 ## Development
 
 ```bash
@@ -22,4 +26,4 @@ Tags named `v*` publish immutable archives to `LH-Releases/LH-Status` and checks
 ops/scripts/deploy-release.sh ARCHIVE CHECKSUM VERSION
 ```
 
-Production requires `/etc/legacy-hosting/status.env` with mode `0600`, a certificate for `status.legacyhosting.xyz`, and `STATUS_DATA_FILE=/var/lib/legacy-hosting-status/status-snapshot.json`.
+Production requires `/etc/legacy-hosting/status.env` with mode `0600`, a certificate for `status.legacyhosting.xyz`, `STATUS_DATA_FILE=/var/lib/legacy-hosting-status/status-snapshot.json`, and `STATUS_EVENTS_FILE=/var/lib/legacy-hosting-status/status-events.json`.

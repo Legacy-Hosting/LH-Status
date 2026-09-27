@@ -1,5 +1,11 @@
 import { buildApp } from "./app.js";
-import { componentTargets, env, statusDataFile } from "./config.js";
+import {
+  componentTargets,
+  env,
+  statusDataFile,
+  statusEventsFile,
+} from "./config.js";
+import { createFileEventReader } from "./events.js";
 import { StatusMonitor } from "./status.js";
 import { createFileSnapshotStore } from "./store.js";
 
@@ -9,6 +15,10 @@ const monitor = new StatusMonitor({
   degradedAfterMs: env.STATUS_DEGRADED_AFTER_MS,
   pollIntervalMs: env.STATUS_POLL_INTERVAL_MS,
   store: createFileSnapshotStore(statusDataFile),
+  eventReader: createFileEventReader(
+    statusEventsFile,
+    componentTargets.map((component) => component.key),
+  ),
 });
 await monitor.restore();
 const app = await buildApp(monitor);

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ComponentTarget } from "./config.js";
+import { statusEventSchema, type EventReader } from "./events.js";
 
 const componentState = z.enum(["operational", "degraded", "outage", "unknown"]);
 const overallState = z.enum([
@@ -10,8 +11,7 @@ const overallState = z.enum([
   "unknown",
 ]);
 
-export const statusSnapshotSchema = z.object({
-  version: z.literal(1),
+const snapshotFields = {
   overall: overallState,
   generatedAt: z.string().datetime().nullable(),
   stale: z.boolean(),
@@ -24,7 +24,27 @@ export const statusSnapshotSchema = z.object({
       checkedAt: z.string().datetime().nullable(),
     }),
   ),
+};
+
+const currentStatusSnapshotSchema = z.object({
+  version: z.literal(2),
+  ...snapshotFields,
+  events: z.array(statusEventSchema).max(100),
 });
+
+const legacyStatusSnapshotSchema = z.object({
+  version: z.literal(1),
+  ...snapshotFields,
+}).transform((snapshot) => ({
+  ...snapshot,
+  version: 2 as const,
+  events: [],
+}));
+
+export const statusSnapshotSchema = z.union([
+  currentStatusSnapshotSchema,
+  legacyStatusSnapshotSchema,
+]);
 
 export type StatusSnapshot = z.infer<typeof statusSnapshotSchema>;
 export type FetchImplementation = (
@@ -63,6 +83,7 @@ export class StatusMonitor {
   readonly #pollIntervalMs: number;
   readonly #fetch: FetchImplementation;
   readonly #store: SnapshotStore | undefined;
+  readonly #eventReader: EventReader | undefined;
   #timer: NodeJS.Timeout | null = null;
   #refreshing: Promise<StatusSnapshot> | null = null;
   #snapshot: StatusSnapshot;
@@ -74,6 +95,7 @@ export class StatusMonitor {
     pollIntervalMs: number;
     fetchImplementation?: FetchImplementation;
     store?: SnapshotStore;
+    eventReader?: EventReader;
   }) {
     this.#targets = options.targets;
     this.#timeoutMs = options.timeoutMs;
@@ -81,8 +103,9 @@ export class StatusMonitor {
     this.#pollIntervalMs = options.pollIntervalMs;
     this.#fetch = options.fetchImplementation ?? fetch;
     this.#store = options.store;
+    this.#eventReader = options.eventReader;
     this.#snapshot = {
-      version: 1,
+      version: 2,
       overall: "unknown",
       generatedAt: null,
       stale: true,
@@ -93,6 +116,7 @@ export class StatusMonitor {
         latencyMs: null,
         checkedAt: null,
       })),
+      events: [],
     };
   }
 
@@ -148,12 +172,21 @@ export class StatusMonitor {
         }
       }),
     );
+    let events = this.#snapshot.events;
+    if (this.#eventReader) {
+      try {
+        events = await this.#eventReader();
+      } catch {
+        // Keep the last validated public event set when an operator file is invalid.
+      }
+    }
     this.#snapshot = {
-      version: 1,
+      version: 2,
       overall: overallFor(components),
       generatedAt: new Date().toISOString(),
       stale: false,
       components,
+      events,
     };
     await this.#store?.save(this.#snapshot);
     return this.#snapshot;

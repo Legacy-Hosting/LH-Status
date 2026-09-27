@@ -1,6 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertTriangle, CheckCircle2, CircleHelp, Clock3, RefreshCw } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  CircleHelp,
+  Clock3,
+  RefreshCw,
+  Siren,
+} from "lucide-react";
 import "./styles.css";
 
 const cacheKey = "lh-status:last-snapshot";
@@ -18,6 +26,38 @@ function cachedSnapshot() {
   } catch {
     return null;
   }
+}
+
+function eventTime(value) {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Oslo",
+  }).format(new Date(value));
+}
+
+function EventCard({ event }) {
+  const timestamp = event.type === "maintenance"
+    ? `${eventTime(event.scheduledFor)}–${eventTime(event.scheduledUntil)}`
+    : `Updated ${eventTime(event.updatedAt)}`;
+  return (
+    <article className={`event-card ${event.impact}`}>
+      <div className="event-copy">
+        <div className="event-meta">
+          <span>{event.status.replaceAll("_", " ")}</span>
+          <time>{timestamp}</time>
+        </div>
+        <h3>{event.title}</h3>
+        <p>{event.message}</p>
+        {event.components.length > 0 && (
+          <div className="event-components">
+            {event.components.map((component) => <b key={component}>{component}</b>)}
+          </div>
+        )}
+      </div>
+      <span className={`impact ${event.impact}`}>{event.impact} impact</span>
+    </article>
+  );
 }
 
 function App() {
@@ -60,6 +100,16 @@ function App() {
     }).format(new Date(snapshot.generatedAt));
   }, [snapshot?.generatedAt]);
   const OverallIcon = overall === "operational" ? CheckCircle2 : overall === "unknown" ? CircleHelp : AlertTriangle;
+  const events = Array.isArray(snapshot?.events) ? snapshot.events : [];
+  const incidents = events.filter(
+    (event) => event.type === "incident" && event.status !== "resolved",
+  );
+  const maintenance = events.filter(
+    (event) => event.type === "maintenance" && event.status !== "completed",
+  );
+  const history = events.filter(
+    (event) => event.status === "resolved" || event.status === "completed",
+  ).slice(0, 5);
 
   return (
     <div className="page">
@@ -79,9 +129,28 @@ function App() {
           ))}
           {!snapshot?.components?.length && <div className="empty">Waiting for the first independent probe snapshot.</div>}
         </section>
-        <section className="history"><div><span>Incident history</span><h2>No published incidents</h2></div><p>Incident publishing and subscriber notifications are planned for the next Status phase.</p></section>
+        <div className="event-groups">
+          <section className="event-section">
+            <div className="event-heading"><Siren size={18} /><div><span>Incidents</span><h2>{incidents.length > 0 ? "Active incidents" : "No active incidents"}</h2></div></div>
+            {incidents.length > 0
+              ? <div className="event-list">{incidents.map((event) => <EventCard event={event} key={event.id} />)}</div>
+              : <p className="event-empty">There are no published incidents affecting Legacy Hosting services.</p>}
+          </section>
+          <section className="event-section">
+            <div className="event-heading"><CalendarClock size={18} /><div><span>Maintenance</span><h2>{maintenance.length > 0 ? "Scheduled maintenance" : "No maintenance scheduled"}</h2></div></div>
+            {maintenance.length > 0
+              ? <div className="event-list">{maintenance.map((event) => <EventCard event={event} key={event.id} />)}</div>
+              : <p className="event-empty">No planned maintenance is currently published.</p>}
+          </section>
+        </div>
+        {history.length > 0 && (
+          <section className="event-section history">
+            <div className="event-heading"><CheckCircle2 size={18} /><div><span>History</span><h2>Recently resolved</h2></div></div>
+            <div className="event-list">{history.map((event) => <EventCard event={event} key={event.id} />)}</div>
+          </section>
+        )}
       </main>
-      <footer><span>Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
+      <footer><span>LH-Status v0.2.0 · Operated independently from FRA1</span><a href="https://legacyhosting.xyz">legacyhosting.xyz</a></footer>
     </div>
   );
 }

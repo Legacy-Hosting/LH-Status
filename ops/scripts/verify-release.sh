@@ -10,6 +10,8 @@ curl --fail --silent --show-error http://127.0.0.1:8082/health | \
   grep -q '"status":"ok"'
 curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/status | \
   grep -q '"components"'
+curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/status | \
+  grep -q '"events"'
 pm2 describe lh-status >/dev/null
 current_release=$(readlink -f "$base/current")
 if [[ $current_release != "$base/releases/"* ]]; then
