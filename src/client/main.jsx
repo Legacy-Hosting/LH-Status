@@ -7,6 +7,7 @@ import {
   BellOff,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   CircleHelp,
   Clock3,
   RefreshCw,
@@ -23,6 +24,212 @@ const labels = {
   major_outage: "Major service outage",
   unknown: "Status is currently unknown",
 };
+const historyRanges = ["5m", "15m", "1h", "24h", "7d", "30d", "90d"];
+
+function graphTime(value, range) {
+  const options = range === "90d" || range === "30d"
+    ? { day: "2-digit", month: "short" }
+    : range === "7d"
+      ? { day: "2-digit", month: "short", hour: "2-digit" }
+      : { hour: "2-digit", minute: "2-digit" };
+  return new Intl.DateTimeFormat("en-GB", {
+    ...options,
+    timeZone: "Europe/Oslo",
+  }).format(new Date(value));
+}
+
+function niceMaximum(value) {
+  const maximum = Math.max(100, value || 0);
+  const magnitude = 10 ** Math.floor(Math.log10(maximum));
+  const normalized = maximum / magnitude;
+  const rounded = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return rounded * magnitude;
+}
+
+function HistoryGraph({ data }) {
+  const [hovered, setHovered] = useState(null);
+  const width = 820;
+  const height = 238;
+  const left = 48;
+  const right = 14;
+  const top = 16;
+  const bottom = 166;
+  const stripTop = 190;
+  const stripHeight = 11;
+  const plotWidth = width - left - right;
+  const points = data.points;
+  const maximum = niceMaximum(Math.max(0, ...points.map((point) => point.maximumLatencyMs ?? 0)));
+  const xFor = (index) => left + (points.length <= 1 ? 0 : (index / (points.length - 1)) * plotWidth);
+  const yFor = (latency) => bottom - (latency / maximum) * (bottom - top);
+  const segments = [];
+  let segment = [];
+  points.forEach((point, index) => {
+    if (point.averageLatencyMs == null) {
+      if (segment.length > 0) segments.push(segment);
+      segment = [];
+    } else {
+      segment.push({ x: xFor(index), y: yFor(point.averageLatencyMs) });
+    }
+  });
+  if (segment.length > 0) segments.push(segment);
+  const hoveredPoint = hovered == null ? null : points[hovered];
+  const hoveredX = hovered == null ? null : xFor(hovered);
+  const statusColors = {
+    operational: "#43d18a",
+    degraded: "#e6ab50",
+    outage: "#ef6673",
+    unknown: "#353943",
+  };
+
+  return (
+    <div className="history-chart">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`${data.component.name} response time and service status`}
+        onPointerLeave={() => setHovered(null)}
+        onPointerMove={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const svgX = ((event.clientX - bounds.left) / bounds.width) * width;
+          const index = Math.round(((svgX - left) / plotWidth) * (points.length - 1));
+          setHovered(Math.max(0, Math.min(points.length - 1, index)));
+        }}
+      >
+        <defs>
+          <linearGradient id={`latency-fill-${data.component.key}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#49c9f2" stopOpacity="0.24" />
+            <stop offset="1" stopColor="#49c9f2" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0, 0.5, 1].map((ratio) => {
+          const y = bottom - ratio * (bottom - top);
+          return (
+            <g key={ratio}>
+              <line className="chart-grid" x1={left} x2={width - right} y1={y} y2={y} />
+              <text className="chart-axis" x={left - 9} y={y + 4} textAnchor="end">
+                {Math.round(maximum * ratio)}
+              </text>
+            </g>
+          );
+        })}
+        {segments.map((line, index) => {
+          const path = line.map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"}${point.x},${point.y}`).join(" ");
+          const area = `${path} L${line.at(-1).x},${bottom} L${line[0].x},${bottom} Z`;
+          return (
+            <g key={index}>
+              <path d={area} fill={`url(#latency-fill-${data.component.key})`} />
+              <path className="latency-line" d={path} />
+            </g>
+          );
+        })}
+        {points.map((point, index) => (
+          <rect
+            key={point.at}
+            x={left + (index * plotWidth) / points.length}
+            y={stripTop}
+            width={Math.max(1, plotWidth / points.length + 0.2)}
+            height={stripHeight}
+            fill={statusColors[point.state]}
+          />
+        ))}
+        <text className="chart-caption" x={left} y={stripTop - 8}>Service status</text>
+        <text className="chart-axis" x={left} y={226}>{graphTime(data.startAt, data.range)}</text>
+        <text className="chart-axis" x={left + plotWidth / 2} y={226} textAnchor="middle">
+          {graphTime(new Date((Date.parse(data.startAt) + Date.parse(data.endAt)) / 2), data.range)}
+        </text>
+        <text className="chart-axis" x={width - right} y={226} textAnchor="end">{graphTime(data.endAt, data.range)}</text>
+        {hoveredPoint && hoveredX != null && (
+          <g>
+            <line className="chart-hover-line" x1={hoveredX} x2={hoveredX} y1={top} y2={stripTop + stripHeight} />
+            {hoveredPoint.averageLatencyMs != null && (
+              <circle className="chart-hover-point" cx={hoveredX} cy={yFor(hoveredPoint.averageLatencyMs)} r="4" />
+            )}
+          </g>
+        )}
+      </svg>
+      {hoveredPoint && hoveredX != null && (
+        <div
+          className="chart-tooltip"
+          style={{ left: `clamp(94px, ${(hoveredX / width) * 100}%, calc(100% - 94px))` }}
+        >
+          <strong>{graphTime(hoveredPoint.at, data.range)}</strong>
+          <span><i className={hoveredPoint.state} />{hoveredPoint.state.replace("_", " ")}</span>
+          <span>Average: {hoveredPoint.averageLatencyMs == null ? "No response" : `${hoveredPoint.averageLatencyMs} ms`}</span>
+          <span>Availability: {hoveredPoint.availabilityPercent == null ? "No data" : `${hoveredPoint.availabilityPercent}%`}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ComponentHistory({ component }) {
+  const [range, setRange] = useState("1h");
+  const [data, setData] = useState(null);
+  const [state, setState] = useState("loading");
+
+  useEffect(() => {
+    let active = true;
+    const load = async (background = false) => {
+      if (!background) setState("loading");
+      try {
+        const response = await fetch(`/api/v1/history/${encodeURIComponent(component.key)}?range=${range}`, {
+          headers: { accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("history unavailable");
+        const next = await response.json();
+        if (active) {
+          setData(next);
+          setState("ready");
+        }
+      } catch {
+        if (active) setState("error");
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(true), 30_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [component.key, range]);
+
+  return (
+    <div className="component-history">
+      <div className="history-toolbar">
+        <div>
+          <strong>Response time</strong>
+          <small>
+            {data?.summary.samples
+              ? `${data.summary.averageLatencyMs ?? "—"} ms average · ${data.summary.availabilityPercent ?? "—"}% available`
+              : "History begins when monitoring is enabled"}
+          </small>
+        </div>
+        <div className="range-picker" aria-label="History range">
+          {historyRanges.map((option) => (
+            <button
+              className={range === option ? "active" : ""}
+              key={option}
+              onClick={() => setRange(option)}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+      {state === "loading" && <div className="history-message">Loading probe history…</div>}
+      {state === "error" && <div className="history-message error">Probe history is temporarily unavailable.</div>}
+      {state === "ready" && data && <HistoryGraph data={data} />}
+      <div className="history-legend" aria-label="Service status legend">
+        <span><i className="operational" />Operational</span>
+        <span><i className="degraded" />Degraded</span>
+        <span><i className="outage" />Outage</span>
+        <span><i className="unknown" />No data</span>
+      </div>
+    </div>
+  );
+}
 
 function applicationServerKey(value) {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
@@ -79,6 +286,7 @@ function App() {
   const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   const [pushState, setPushState] = useState(pushSupported ? "checking" : "unsupported");
   const [pushMessage, setPushMessage] = useState("");
+  const [expandedComponent, setExpandedComponent] = useState(null);
   const refresh = async () => {
     try {
       const response = await fetch("/api/v1/status", {
@@ -188,7 +396,7 @@ function App() {
   const maintenance = events.filter(
     (event) => event.type === "maintenance" && event.status !== "completed",
   );
-  const history = events.filter(
+  const eventHistory = events.filter(
     (event) => event.status === "resolved" || event.status === "completed",
   ).slice(0, 5);
 
@@ -204,9 +412,17 @@ function App() {
         <div className="title"><div><span>Components</span><h2>Legacy Hosting services</h2></div><div><Clock3 size={14} />Updated {updated}</div></div>
         <section className="components">
           {(snapshot?.components ?? []).map((component) => (
-            <article key={component.key}>
-              <div><strong>{component.name}</strong><small>{component.latencyMs == null ? "No response" : `${component.latencyMs} ms`}</small></div>
-              <span className={`badge ${component.state}`}><i />{component.state.replace("_", " ")}</span>
+            <article className={expandedComponent === component.key ? "expanded" : ""} key={component.key}>
+              <button
+                className="component-summary"
+                type="button"
+                aria-expanded={expandedComponent === component.key}
+                onClick={() => setExpandedComponent((current) => current === component.key ? null : component.key)}
+              >
+                <div><strong>{component.name}</strong><small>{component.latencyMs == null ? "No response" : `${component.latencyMs} ms`}</small></div>
+                <div className="component-state"><span className={`badge ${component.state}`}><i />{component.state.replace("_", " ")}</span><ChevronDown size={17} /></div>
+              </button>
+              {expandedComponent === component.key && <ComponentHistory component={component} />}
             </article>
           ))}
           {!snapshot?.components?.length && <div className="empty">Waiting for the first independent probe snapshot.</div>}
@@ -225,10 +441,10 @@ function App() {
               : <p className="event-empty">No planned maintenance is currently published.</p>}
           </section>
         </div>
-        {history.length > 0 && (
+        {eventHistory.length > 0 && (
           <section className="event-section history">
             <div className="event-heading"><CheckCircle2 size={18} /><div><span>History</span><h2>Recently resolved</h2></div></div>
-            <div className="event-list">{history.map((event) => <EventCard event={event} key={event.id} />)}</div>
+            <div className="event-list">{eventHistory.map((event) => <EventCard event={event} key={event.id} />)}</div>
           </section>
         )}
       </main>

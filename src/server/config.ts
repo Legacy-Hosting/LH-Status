@@ -28,6 +28,7 @@ const schema = z
     STATUS_PUBLIC_ORIGIN: z.string().url().default("https://status.legacyhosting.xyz"),
     STATUS_COMPONENTS: z.string().default(defaultComponents),
     STATUS_DATA_FILE: z.string().min(1).default("./var/status-snapshot.json"),
+    STATUS_HISTORY_FILE: z.string().min(1).default("./var/status-history.ndjson"),
     STATUS_EVENTS_FILE: z.string().min(1).default("./var/status-events.json"),
     STATUS_PUSH_STATE_FILE: z.string().min(1).default("./var/push-state.json"),
     STATUS_PUSH_VAPID_SUBJECT: z.string().min(1).default("mailto:status@legacyhosting.xyz"),
@@ -153,6 +154,7 @@ function parseComponents(raw: string): ComponentTarget[] {
 
 export const componentTargets = parseComponents(env.STATUS_COMPONENTS);
 export const statusDataFile = resolve(process.cwd(), env.STATUS_DATA_FILE);
+export const statusHistoryFile = resolve(process.cwd(), env.STATUS_HISTORY_FILE);
 export const statusEventsFile = resolve(process.cwd(), env.STATUS_EVENTS_FILE);
 export const statusPushStateFile = resolve(process.cwd(), env.STATUS_PUSH_STATE_FILE);
 export const pushNotificationConfig =

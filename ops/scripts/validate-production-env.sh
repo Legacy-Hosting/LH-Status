@@ -14,7 +14,7 @@ fi
 set -a
 . "$environment_file"
 set +a
-required=(NODE_ENV HOST PORT STATUS_PUBLIC_ORIGIN STATUS_COMPONENTS STATUS_DATA_FILE STATUS_EVENTS_FILE STATUS_PUSH_STATE_FILE STATUS_PUSH_VAPID_SUBJECT STATUS_PUSH_VAPID_PUBLIC_KEY STATUS_PUSH_VAPID_PRIVATE_KEY STATUS_PUSH_ALLOWED_HOSTS)
+required=(NODE_ENV HOST PORT STATUS_PUBLIC_ORIGIN STATUS_COMPONENTS STATUS_DATA_FILE STATUS_HISTORY_FILE STATUS_EVENTS_FILE STATUS_PUSH_STATE_FILE STATUS_PUSH_VAPID_SUBJECT STATUS_PUSH_VAPID_PUBLIC_KEY STATUS_PUSH_VAPID_PRIVATE_KEY STATUS_PUSH_ALLOWED_HOSTS)
 for name in "${required[@]}"; do
   if [[ -z ${!name:-} ]]; then
     echo "Missing Status setting: $name" >&2
@@ -31,6 +31,10 @@ if [[ $STATUS_PUBLIC_ORIGIN != https://status.legacyhosting.xyz ]]; then
 fi
 if [[ $STATUS_DATA_FILE != /var/lib/legacy-hosting-status/* ]]; then
   echo "STATUS_DATA_FILE must stay below /var/lib/legacy-hosting-status" >&2
+  exit 1
+fi
+if [[ $STATUS_HISTORY_FILE != /var/lib/legacy-hosting-status/* ]]; then
+  echo "STATUS_HISTORY_FILE must stay below /var/lib/legacy-hosting-status" >&2
   exit 1
 fi
 if [[ $STATUS_EVENTS_FILE != /var/lib/legacy-hosting-status/* ]]; then

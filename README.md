@@ -4,6 +4,8 @@ Independent public service-status page running in FRA1. It does not use the AMS3
 
 The backend performs bounded HTTPS probes, writes the latest public snapshot atomically to local persistent storage, and serves the same snapshot through a small API. Nginx falls back to the stored JSON file if the Node.js process is unavailable, while the browser also retains the last successful snapshot locally.
 
+Every probe is appended to `STATUS_HISTORY_FILE`. The public component rows load an aggregated response-time graph for `5m`, `15m`, `1h`, `24h`, `7d`, `30d`, or `90d`, including operational, degraded, outage, and missing-data periods. Raw history is retained for at most 90 days; older records are pruned automatically and the append-only file is compacted hourly. Probe URLs are never written to history or returned by `/api/v1/history/:component`.
+
 No internal URL, token, infrastructure address, or error body is returned by the public API.
 
 Incidents and planned maintenance are loaded from the local `STATUS_EVENTS_FILE` and copied into the same atomic public snapshot as component health. This keeps published events available through the Nginx fallback when the Node.js process is unavailable. Event text is schema-validated and rejects URLs, the internal `legacyh.fyi` domain, and private IPv4 addresses. Event component keys must match `STATUS_COMPONENTS`.
@@ -40,4 +42,4 @@ Tags named `v*` publish immutable archives to `LH-Releases/LH-Status`, checksums
 ops/scripts/deploy-release.sh ARCHIVE CHECKSUM SIGNATURE VERSION
 ```
 
-Production requires `/etc/legacy-hosting/status.env` with mode `0600`, a certificate for `status.legacyhosting.xyz`, `STATUS_PUBLIC_ORIGIN=https://status.legacyhosting.xyz`, `STATUS_DATA_FILE=/var/lib/legacy-hosting-status/status-snapshot.json`, `STATUS_EVENTS_FILE=/var/lib/legacy-hosting-status/status-events.json`, `STATUS_PUSH_STATE_FILE=/var/lib/legacy-hosting-status/push-state.json`, and the protected VAPID settings.
+Production requires `/etc/legacy-hosting/status.env` with mode `0600`, a certificate for `status.legacyhosting.xyz`, `STATUS_PUBLIC_ORIGIN=https://status.legacyhosting.xyz`, `STATUS_DATA_FILE=/var/lib/legacy-hosting-status/status-snapshot.json`, `STATUS_HISTORY_FILE=/var/lib/legacy-hosting-status/status-history.ndjson`, `STATUS_EVENTS_FILE=/var/lib/legacy-hosting-status/status-events.json`, `STATUS_PUSH_STATE_FILE=/var/lib/legacy-hosting-status/push-state.json`, and the protected VAPID settings.

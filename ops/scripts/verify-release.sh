@@ -7,6 +7,7 @@ test -f "$base/current-release"
 test -f /var/www/legacy-hosting-status/index.html
 test -f /var/www/legacy-hosting-status/sw.js
 test -f /var/lib/legacy-hosting-status/status-snapshot.json
+test -f /var/lib/legacy-hosting-status/status-history.ndjson
 curl --fail --silent --show-error http://127.0.0.1:8082/health | \
   grep -q '"status":"ok"'
 curl --fail --silent --show-error http://127.0.0.1:8082/api/v1/status | \

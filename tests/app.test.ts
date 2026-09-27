@@ -38,7 +38,7 @@ test("process health stays independent from monitored components", async () => {
   const response = await app.inject({ method: "GET", url: "/health" });
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().service, "LH-Status");
-  assert.equal(response.json().version, "0.4.3");
+  assert.equal(response.json().version, "0.5.0");
 });
 
 test("Web Push subscriptions require same-origin requests", async () => {
@@ -107,6 +107,57 @@ test("the status snapshot is public and cacheable during an upstream failure", a
   assert.match(response.headers["cache-control"] ?? "", /stale-if-error=300/);
   assert.equal(response.json().overall, "operational");
   assert.deepEqual(response.json().events, []);
+});
+
+test("component history validates the public component and requested range", async () => {
+  const historyApp = await buildApp(
+    new StatusMonitor({
+      targets: [],
+      timeoutMs: 1_000,
+      degradedAfterMs: 1_500,
+      pollIntervalMs: 30_000,
+    }),
+    undefined,
+    {
+      query: (component, range) => component === "api"
+        ? {
+            component: { key: "api", name: "API" },
+            range,
+            startAt: "2026-09-27T17:00:00.000Z",
+            endAt: "2026-09-27T18:00:00.000Z",
+            bucketSeconds: 60,
+            summary: {
+              samples: 1,
+              availabilityPercent: 100,
+              averageLatencyMs: 80,
+              operational: 1,
+              degraded: 0,
+              outage: 0,
+            },
+            points: [],
+          }
+        : null,
+    },
+  );
+  try {
+    const response = await historyApp.inject({
+      method: "GET",
+      url: "/api/v1/history/api?range=1h",
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().range, "1h");
+    assert.match(response.headers["cache-control"] ?? "", /max-age=15/);
+    assert.equal((await historyApp.inject({
+      method: "GET",
+      url: "/api/v1/history/private?range=90d",
+    })).statusCode, 404);
+    assert.equal((await historyApp.inject({
+      method: "GET",
+      url: "/api/v1/history/api?range=1y",
+    })).statusCode, 400);
+  } finally {
+    await historyApp.close();
+  }
 });
 
 test("the public Atom feed is cacheable and contains no probe target", async () => {

@@ -5,10 +5,12 @@ import {
   pushNotificationConfig,
   statusDataFile,
   statusEventsFile,
+  statusHistoryFile,
   statusPushStateFile,
 } from "./config.js";
 import { createFileEventReader } from "./events.js";
 import { PushNotificationService } from "./push.js";
+import { FileStatusHistory } from "./history.js";
 import { StatusMonitor } from "./status.js";
 import { createFileSnapshotStore } from "./store.js";
 
@@ -27,6 +29,12 @@ if (pushNotificationConfig) {
   }
 }
 
+const history = new FileStatusHistory({
+  path: statusHistoryFile,
+  components: componentTargets,
+});
+await history.restore();
+
 const monitor = new StatusMonitor({
   targets: componentTargets,
   timeoutMs: env.STATUS_REQUEST_TIMEOUT_MS,
@@ -38,6 +46,16 @@ const monitor = new StatusMonitor({
     componentTargets.map((component) => component.key),
   ),
   onSnapshot: async (snapshot) => {
+    if (snapshot.generatedAt) {
+      try {
+        await history.record({
+          timestamp: snapshot.generatedAt,
+          components: snapshot.components,
+        });
+      } catch {
+        process.stderr.write("Status probe history could not be persisted\n");
+      }
+    }
     try {
       await pushNotifications?.publish(snapshot.events);
     } catch {
@@ -46,7 +64,7 @@ const monitor = new StatusMonitor({
   },
 });
 await monitor.restore();
-const app = await buildApp(monitor, pushNotifications);
+const app = await buildApp(monitor, pushNotifications, history);
 try {
   await monitor.refresh();
 } catch (error) {
