@@ -8,7 +8,11 @@ import {
   statusHistoryFile,
   statusPushStateFile,
 } from "./config.js";
-import { createFileEventReader } from "./events.js";
+import {
+  combineEventReaders,
+  createFileEventReader,
+  createRemoteEventReader,
+} from "./events.js";
 import { PushNotificationService } from "./push.js";
 import { FileStatusHistory } from "./history.js";
 import { StatusMonitor } from "./status.js";
@@ -41,9 +45,16 @@ const monitor = new StatusMonitor({
   degradedAfterMs: env.STATUS_DEGRADED_AFTER_MS,
   pollIntervalMs: env.STATUS_POLL_INTERVAL_MS,
   store: createFileSnapshotStore(statusDataFile),
-  eventReader: createFileEventReader(
-    statusEventsFile,
-    componentTargets.map((component) => component.key),
+  eventReader: combineEventReaders(
+    createFileEventReader(
+      statusEventsFile,
+      componentTargets.map((component) => component.key),
+    ),
+    createRemoteEventReader({
+      url: env.STATUS_EVENTS_URL,
+      allowedComponentKeys: componentTargets.map((component) => component.key),
+      timeoutMs: env.STATUS_REQUEST_TIMEOUT_MS,
+    }),
   ),
   onSnapshot: async (snapshot) => {
     if (snapshot.generatedAt) {

@@ -30,6 +30,7 @@ const schema = z
     STATUS_DATA_FILE: z.string().min(1).default("./var/status-snapshot.json"),
     STATUS_HISTORY_FILE: z.string().min(1).default("./var/status-history.ndjson"),
     STATUS_EVENTS_FILE: z.string().min(1).default("./var/status-events.json"),
+    STATUS_EVENTS_URL: z.string().url().default("https://hub.legacyhosting.xyz/api/v1/public/status-events"),
     STATUS_PUSH_STATE_FILE: z.string().min(1).default("./var/push-state.json"),
     STATUS_PUSH_VAPID_SUBJECT: z.string().min(1).default("mailto:status@legacyhosting.xyz"),
     STATUS_PUSH_VAPID_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]{80,120}$/).optional(),
@@ -84,6 +85,14 @@ const schema = z
           code: "custom",
           path: ["STATUS_PUSH_VAPID_PUBLIC_KEY"],
           message: "Production Status requires a complete Web Push VAPID key pair",
+        });
+      }
+      const eventsUrl = new URL(value.STATUS_EVENTS_URL);
+      if (eventsUrl.protocol !== "https:" || eventsUrl.username || eventsUrl.password) {
+        context.addIssue({
+          code: "custom",
+          path: ["STATUS_EVENTS_URL"],
+          message: "Production status events URL must be credential-free HTTPS",
         });
       }
     }
