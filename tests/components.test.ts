@@ -18,7 +18,7 @@ test("remote components require direct origin FQDNs and preserve Hub ordering", 
     {
       key: "web-02",
       name: "Web 02",
-      url: "https://web02.legacyhosting.xyz/health",
+      url: "http://web02.legacyhosting.xyz/health",
       connectHostname: "ams3.web-02.legacyh.fyi",
       primary: false,
       datacenter: "Amsterdam 3",
@@ -33,6 +33,13 @@ test("remote components require direct origin FQDNs and preserve Hub ordering", 
     fetchImplementation: async () => Response.json(payload),
   });
   assert.deepEqual((await reader()).map((component) => component.key), ["panel", "web-02"]);
+
+  const credentialed = createRemoteComponentReader({
+    url: "https://hub.legacyhosting.xyz/api/v1/public/status-components",
+    timeoutMs: 1_000,
+    fetchImplementation: async () => Response.json([{ ...payload[0], url: "http://user:password@panel.legacyhosting.xyz/" }]),
+  });
+  await assert.rejects(credentialed());
 
   const invalid = createRemoteComponentReader({
     url: "https://hub.legacyhosting.xyz/api/v1/public/status-components",

@@ -1,4 +1,5 @@
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { z } from "zod";
 import type { ComponentReader, ComponentTarget } from "./components.js";
@@ -71,21 +72,22 @@ async function requestDirectAddress(
   timeoutMs: number,
 ) {
   const publicUrl = new URL(target.url);
+  const secure = publicUrl.protocol === "https:";
+  const sendRequest = secure ? httpsRequest : httpRequest;
   return new Promise<boolean>((resolve, reject) => {
-    const request = httpsRequest({
-      protocol: "https:",
+    const request = sendRequest({
+      protocol: publicUrl.protocol,
       hostname: address,
       family,
-      port: publicUrl.port ? Number(publicUrl.port) : 443,
+      port: publicUrl.port ? Number(publicUrl.port) : secure ? 443 : 80,
       method: "GET",
       path: `${publicUrl.pathname}${publicUrl.search}`,
-      servername: publicUrl.hostname,
+      ...(secure ? { servername: publicUrl.hostname, rejectUnauthorized: true } : {}),
       headers: {
         accept: "application/json,text/html;q=0.8",
         host: publicUrl.host,
         "user-agent": "LH-Status/0.6 direct-origin-probe",
       },
-      rejectUnauthorized: true,
       agent: false,
     }, (response) => {
       response.resume();
@@ -100,7 +102,7 @@ async function requestDirectAddress(
 export const probeDirectOrigin: DirectProbe = async (target, timeoutMs) => {
   if (!target.connectHostname) throw new Error("Direct origin FQDN is missing");
   const publicUrl = new URL(target.url);
-  if (publicUrl.protocol !== "https:") throw new Error("Direct origin probes require HTTPS");
+  if (!["http:", "https:"].includes(publicUrl.protocol)) throw new Error("Direct origin probes require HTTP or HTTPS");
   const addresses = await lookup(target.connectHostname, { all: true, verbatim: true });
   if (addresses.length === 0) throw new Error("Direct origin FQDN did not resolve");
   let lastError: unknown;

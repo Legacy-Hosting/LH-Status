@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 import { test } from "node:test";
 import { statusEventsSchema, type StatusEvent } from "../src/server/events.js";
 import {
   classifyProbe,
+  probeDirectOrigin,
   statusSnapshotSchema,
   StatusMonitor,
 } from "../src/server/status.js";
@@ -84,6 +86,24 @@ test("origin FQDN targets use the direct probe and retain public grouping metada
   assert.equal(snapshot.components[0]?.state, "operational");
   assert.equal(snapshot.components[0]?.datacenter, "Amsterdam 3");
   assert.equal(JSON.stringify(snapshot).includes("legacyh.fyi"), false);
+});
+
+test("direct HTTP probes connect to the origin IP while preserving the public Host header", async (context) => {
+  let receivedHost = "";
+  const server = createServer((request, response) => {
+    receivedHost = request.headers.host ?? "";
+    response.writeHead(200).end("ok");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  context.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const target = {
+    key: "web-02", name: "Web 02", url: `http://public.example.test:${address.port}/health`,
+    connectHostname: "localhost",
+  };
+  assert.equal(await probeDirectOrigin(target, 1_000), true);
+  assert.equal(receivedHost, `public.example.test:${address.port}`);
 });
 
 test("remote target refresh changes monitored services without a restart", async () => {

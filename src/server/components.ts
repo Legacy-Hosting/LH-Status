@@ -25,11 +25,11 @@ const remoteComponentTargetSchema = componentTargetSchema.extend({
   order: z.number().int().min(0).max(999),
 }).superRefine((component, context) => {
   const url = new URL(component.url);
-  if (url.protocol !== "https:" || url.username || url.password || url.hash) {
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash) {
     context.addIssue({
       code: "custom",
       path: ["url"],
-      message: "Public component URLs must be credential-free HTTPS",
+      message: "Public component URLs must be credential-free HTTP or HTTPS",
     });
   }
 });
